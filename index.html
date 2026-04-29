@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gerenciamento de Caixa</title>
+<title>LavaJato — Sistema de Gestão</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -17,229 +17,249 @@
     <span class="nav-brand-text">LavaJato</span>
   </div>
   <button class="nav-btn active" onclick="goPage('dashboard')" id="nav-dashboard">
-    <span class="nav-icon">📊</span>Dashboard
+    <span class="nav-icon">📊</span>
+    <span class="nav-label">Dashboard</span>
   </button>
   <button class="nav-btn" onclick="goPage('lancamentos')" id="nav-lancamentos">
-    <span class="nav-icon">➕</span>Lançamentos
+    <span class="nav-icon">➕</span>
+    <span class="nav-label">Lançamentos</span>
   </button>
   <button class="nav-btn" onclick="goPage('historico')" id="nav-historico">
-    <span class="nav-icon">📋</span>Histórico
+    <span class="nav-icon">📋</span>
+    <span class="nav-label">Histórico</span>
+  </button>
+  <button class="nav-btn nav-config-mobile" onclick="openSettings()" id="nav-config">
+    <span class="nav-icon">⚙️</span>
+    <span class="nav-label">Config</span>
   </button>
   <button class="settings-btn" onclick="openSettings()" title="Configurações">⚙️</button>
-  <button class="nav-btn" onclick="openSettings()" id="nav-config" style="display:flex">
-    <span class="nav-icon">⚙️</span>Config
-  </button>
 </nav>
 
 <main>
 
-<!-- ===================== DASHBOARD ===================== -->
-<div class="page active" id="page-dashboard">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-    <h1 class="section-title">Dashboard</h1>
-    <span id="today-label" style="font-size:0.8rem;color:var(--muted)"></span>
-  </div>
-  <p class="section-sub">Visão geral do seu negócio</p>
-
-  <div class="period-bar" id="period-bar">
-    <button class="period-btn active" onclick="setPeriod('semana', event)">Esta Semana</button>
-    <button class="period-btn" onclick="setPeriod('mes', event)">Este Mês</button>
-    <button class="period-btn" onclick="setPeriod('mes_ant', event)">Mês Anterior</button>
-    <button class="period-btn" onclick="setPeriod('custom', event)">Personalizado</button>
-  </div>
-  <div id="period-custom-bar" style="display:none;margin-bottom:16px;" class="period-custom">
-    <input type="date" id="custom-start">
-    <span style="color:var(--muted);font-size:0.85rem">até</span>
-    <input type="date" id="custom-end">
-    <button class="period-btn active" onclick="applyCustomPeriod()" style="border-radius:var(--radius-sm)">Aplicar</button>
-  </div>
-
-  <div class="kpi-grid" id="kpi-grid">
-    <div class="kpi-card green"><div class="kpi-label">Receita Total</div><div class="kpi-value" id="kpi-receita">R$ 0,00</div></div>
-    <div class="kpi-card red"><div class="kpi-label">Despesas</div><div class="kpi-value" id="kpi-despesas">R$ 0,00</div></div>
-    <div class="kpi-card accent"><div class="kpi-label">Lucro Líquido</div><div class="kpi-value" id="kpi-lucro">R$ 0,00</div></div>
-    <div class="kpi-card blue"><div class="kpi-label">Lavagens</div><div class="kpi-value" id="kpi-lavagens">0</div></div>
-    <div class="kpi-card yellow"><div class="kpi-label">A Receber</div><div class="kpi-value" id="kpi-areceber">R$ 0,00</div></div>
-    <div class="kpi-card purple"><div class="kpi-label">Ticket Médio</div><div class="kpi-value" id="kpi-ticket">R$ 0,00</div></div>
-  </div>
-
-  <div class="charts-grid">
-    <div class="chart-card full">
-      <div class="chart-title">📈 Receita x Despesas</div>
-      <div class="chart-wrap"><canvas id="chartRecDesp"></canvas></div>
+  <!-- ===================== DASHBOARD ===================== -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <h1 class="section-title">Dashboard</h1>
+      <span id="today-label" class="today-label"></span>
     </div>
-    <div class="chart-card">
-      <div class="chart-title">📅 Evolução de Lavagens</div>
-      <div class="chart-wrap"><canvas id="chartLavagens"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">💰 Receita por Dia da Semana</div>
-      <div class="chart-wrap"><canvas id="chartDiaSemana"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">🧽 Distribuição por Tipo de Serviço</div>
-      <div class="chart-wrap"><canvas id="chartTipos"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">📦 Distribuição de Despesas</div>
-      <div class="chart-wrap"><canvas id="chartDespesasCat"></canvas></div>
-    </div>
-  </div>
+    <p class="section-sub">Visão geral do seu negócio</p>
 
-  <div class="pendencias-section">
-    <div class="pendencias-header">
-      <h3>🔴 Contas a Receber</h3>
-      <span class="pendencias-total" id="pend-total-label">R$ 0,00</span>
+    <div class="period-bar">
+      <button class="period-btn active" onclick="setPeriod('semana', event)">Esta Semana</button>
+      <button class="period-btn" onclick="setPeriod('mes', event)">Este Mês</button>
+      <button class="period-btn" onclick="setPeriod('mes_ant', event)">Mês Anterior</button>
+      <button class="period-btn" onclick="setPeriod('custom', event)">Personalizado</button>
     </div>
-    <div class="pend-list" id="pend-list"></div>
-  </div>
-</div>
+    <div id="period-custom-bar" class="period-custom" style="display:none">
+      <input type="date" id="custom-start">
+      <span class="period-sep">até</span>
+      <input type="date" id="custom-end">
+      <button class="period-btn active" onclick="applyCustomPeriod()">Aplicar</button>
+    </div>
 
-<!-- ===================== LANCAMENTOS ===================== -->
-<div class="page" id="page-lancamentos">
-  <h1 class="section-title">Lançamentos</h1>
-  <p class="section-sub">Registre serviços e despesas</p>
+    <div class="kpi-grid">
+      <div class="kpi-card green"><div class="kpi-label">Receita Total</div><div class="kpi-value" id="kpi-receita">R$ 0,00</div></div>
+      <div class="kpi-card red"><div class="kpi-label">Despesas</div><div class="kpi-value" id="kpi-despesas">R$ 0,00</div></div>
+      <div class="kpi-card accent"><div class="kpi-label">Lucro Líquido</div><div class="kpi-value" id="kpi-lucro">R$ 0,00</div></div>
+      <div class="kpi-card blue"><div class="kpi-label">Lavagens</div><div class="kpi-value" id="kpi-lavagens">0</div></div>
+      <div class="kpi-card yellow"><div class="kpi-label">A Receber</div><div class="kpi-value" id="kpi-areceber">R$ 0,00</div></div>
+      <div class="kpi-card purple"><div class="kpi-label">Ticket Médio</div><div class="kpi-value" id="kpi-ticket">R$ 0,00</div></div>
+    </div>
 
-  <div class="toggle-tipo">
-    <button class="toggle-opt servico active" onclick="setTipo('servico')">🚗 Serviço</button>
-    <button class="toggle-opt despesa" onclick="setTipo('despesa')">💸 Despesa</button>
-  </div>
-
-  <div id="edit-banner" style="display:none">
-    <div class="edit-badge">✏️ Editando lançamento <span class="cancel-edit" onclick="cancelEdit()">✕ Cancelar</span></div>
-  </div>
-
-  <!-- FORM SERVIÇO -->
-  <div class="form-section active form-card" id="form-servico">
-    <div class="form-row">
-      <div class="form-group">
-        <label>Data <span class="req">*</span></label>
-        <input type="date" id="s-data">
+    <!-- PAINEL DE AGENDAMENTOS -->
+    <div class="agendamentos-section" id="agendamentos-panel" style="display:none">
+      <div class="agendamentos-header">
+        <h3>📅 Próximos Agendamentos</h3>
+        <span class="ag-count-badge" id="ag-count">0 agendamentos</span>
       </div>
-      <div class="form-group">
-        <label>Forma de Pagamento</label>
-        <select id="s-pagamento">
-          <option value="">Selecionar</option>
-          <option>Dinheiro</option>
-          <option>PIX</option>
-          <option>Cartão</option>
-          <option>Faturado</option>
-        </select>
+      <div id="ag-list"></div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <div class="chart-title">📈 Receita x Despesas</div>
+        <div class="chart-wrap"><canvas id="chartRecDesp"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📅 Evolução de Lavagens</div>
+        <div class="chart-wrap"><canvas id="chartLavagens"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">💰 Receita por Dia da Semana</div>
+        <div class="chart-wrap"><canvas id="chartDiaSemana"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🧽 Tipos de Serviço</div>
+        <div class="chart-wrap"><canvas id="chartTipos"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📦 Despesas por Categoria</div>
+        <div class="chart-wrap"><canvas id="chartDespesasCat"></canvas></div>
       </div>
     </div>
-    <div class="form-group">
-      <label>Cliente <span class="req">*</span></label>
-      <input type="text" id="s-cliente" placeholder="Nome do cliente">
-    </div>
-    <div class="form-group">
-      <label>Carro <span class="req">*</span></label>
-      <input type="text" id="s-carro" placeholder="Modelo e/ou placa">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Tipo de Lavagem <span class="req">*</span></label>
-        <select id="s-tipo" onchange="autoPreco()">
-          <option value="">Selecionar tipo</option>
-        </select>
+
+    <div class="pendencias-section">
+      <div class="pendencias-header">
+        <h3>🔴 Contas a Receber</h3>
+        <span class="pendencias-total" id="pend-total-label">R$ 0,00</span>
       </div>
-      <div class="form-group">
-        <label>Preço (R$) <span class="req">*</span></label>
-        <input type="number" id="s-preco" placeholder="0,00" step="0.01" min="0">
-      </div>
+      <div class="pend-list" id="pend-list"></div>
     </div>
-    <div class="form-group">
-      <label>Status de Pagamento <span class="req">*</span></label>
-      <div class="status-toggle">
-        <button class="status-opt pago active" onclick="setStatus('pago')">✅ Pago</button>
-        <button class="status-opt nao-pago" onclick="setStatus('nao-pago')">⏳ Não Pago</button>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Observações</label>
-      <textarea id="s-obs" placeholder="Anotações opcionais..."></textarea>
-    </div>
-    <button class="btn-salvar" onclick="salvarServico()">Salvar Serviço</button>
   </div>
 
-  <!-- FORM DESPESA -->
-  <div class="form-section form-card" id="form-despesa">
-    <div class="form-row">
+  <!-- ===================== LANÇAMENTOS ===================== -->
+  <div class="page" id="page-lancamentos">
+    <h1 class="section-title">Lançamentos</h1>
+    <p class="section-sub">Registre serviços e despesas</p>
+
+    <div class="toggle-tipo">
+      <button class="toggle-opt servico active" onclick="setTipo('servico')">🚗 Serviço</button>
+      <button class="toggle-opt despesa" onclick="setTipo('despesa')">💸 Despesa</button>
+    </div>
+
+    <div id="edit-banner" style="display:none">
+      <div class="edit-badge">✏️ Editando lançamento <span class="cancel-edit" onclick="cancelEdit()">✕ Cancelar</span></div>
+    </div>
+
+    <!-- FORM SERVIÇO -->
+    <div class="form-section active form-card" id="form-servico">
+      <div id="agendamento-banner" class="agendamento-alert" style="display:none">
+        📅 Data futura detectada — será registrado como <strong>agendamento</strong>.
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Data <span class="req">*</span></label>
+          <input type="date" id="s-data">
+        </div>
+        <div class="form-group">
+          <label>Forma de Pagamento</label>
+          <select id="s-pagamento">
+            <option value="">Selecionar</option>
+            <option>Dinheiro</option>
+            <option>PIX</option>
+            <option>Cartão</option>
+            <option>Faturado</option>
+          </select>
+        </div>
+      </div>
+
       <div class="form-group">
-        <label>Data <span class="req">*</span></label>
-        <input type="date" id="d-data">
+        <label>Cliente <span class="req">*</span></label>
+        <input type="text" id="s-cliente" placeholder="Nome do cliente">
       </div>
       <div class="form-group">
-        <label>Categoria <span class="req">*</span></label>
-        <select id="d-categoria">
-          <option value="">Selecionar</option>
-        </select>
+        <label>Carro <span class="req">*</span></label>
+        <input type="text" id="s-carro" placeholder="Modelo e/ou placa">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo de Serviço <span class="req">*</span></label>
+          <select id="s-tipo" onchange="autoPreco()">
+            <option value="">Selecionar tipo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Preço (R$) <span class="req">*</span></label>
+          <input type="number" id="s-preco" placeholder="0,00" step="0.01" min="0">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Status de Pagamento <span class="req">*</span></label>
+        <div class="status-toggle">
+          <button class="status-opt pago active" onclick="setStatus('pago')">✅ Pago</button>
+          <button class="status-opt nao-pago" onclick="setStatus('nao-pago')">⏳ Não Pago</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Observações</label>
+        <textarea id="s-obs" placeholder="Anotações opcionais..."></textarea>
+      </div>
+
+      <button class="btn-salvar" onclick="salvarServico()">Salvar Serviço</button>
+    </div>
+
+    <!-- FORM DESPESA -->
+    <div class="form-section form-card" id="form-despesa">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Data <span class="req">*</span></label>
+          <input type="date" id="d-data">
+        </div>
+        <div class="form-group">
+          <label>Categoria <span class="req">*</span></label>
+          <select id="d-categoria">
+            <option value="">Selecionar</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descrição <span class="req">*</span></label>
+        <input type="text" id="d-descricao" placeholder="O que foi comprado ou pago">
+      </div>
+      <div class="form-group">
+        <label>Valor (R$) <span class="req">*</span></label>
+        <input type="number" id="d-valor" placeholder="0,00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Observações</label>
+        <textarea id="d-obs" placeholder="Anotações opcionais..."></textarea>
+      </div>
+      <button class="btn-salvar despesa-btn" onclick="salvarDespesa()">Salvar Despesa</button>
+    </div>
+  </div>
+
+  <!-- ===================== HISTÓRICO ===================== -->
+  <div class="page" id="page-historico">
+    <h1 class="section-title">Histórico</h1>
+    <p class="section-sub">Consulte, filtre e edite seus lançamentos</p>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="setHistTab('servicos')" id="tab-servicos">🚗 Serviços</button>
+      <button class="tab-btn" onclick="setHistTab('despesas')" id="tab-despesas">💸 Despesas</button>
+    </div>
+
+    <div id="filtros-servicos" class="filters-bar">
+      <input type="date" id="f-s-ini">
+      <input type="date" id="f-s-fim">
+      <select id="f-s-status">
+        <option value="">Todos os status</option>
+        <option value="pago">Pago</option>
+        <option value="nao-pago">Não Pago</option>
+      </select>
+      <select id="f-s-tipo">
+        <option value="">Todos os tipos</option>
+      </select>
+      <input type="text" id="f-s-busca" placeholder="🔍 Buscar cliente ou carro">
+      <button class="period-btn" onclick="renderHistorico()" style="flex:none">Filtrar</button>
+    </div>
+
+    <div id="filtros-despesas" class="filters-bar" style="display:none">
+      <input type="date" id="f-d-ini">
+      <input type="date" id="f-d-fim">
+      <select id="f-d-cat">
+        <option value="">Todas as categorias</option>
+      </select>
+      <input type="text" id="f-d-busca" placeholder="🔍 Buscar descrição">
+      <button class="period-btn" onclick="renderHistorico()" style="flex:none">Filtrar</button>
+    </div>
+
+    <div class="hist-table-wrap">
+      <div id="hist-list"></div>
+      <div class="hist-footer">
+        <span id="hist-count">0 registros</span>
+        <span>Total: <strong id="hist-total">R$ 0,00</strong></span>
       </div>
     </div>
-    <div class="form-group">
-      <label>Descrição <span class="req">*</span></label>
-      <input type="text" id="d-descricao" placeholder="O que foi comprado ou pago">
-    </div>
-    <div class="form-group">
-      <label>Valor (R$) <span class="req">*</span></label>
-      <input type="number" id="d-valor" placeholder="0,00" step="0.01" min="0">
-    </div>
-    <div class="form-group">
-      <label>Observações</label>
-      <textarea id="d-obs" placeholder="Anotações opcionais..."></textarea>
-    </div>
-    <button class="btn-salvar despesa-btn" onclick="salvarDespesa()">Salvar Despesa</button>
   </div>
-</div>
-
-<!-- ===================== HISTORICO ===================== -->
-<div class="page" id="page-historico">
-  <h1 class="section-title">Histórico</h1>
-  <p class="section-sub">Consulte, filtre e edite seus lançamentos</p>
-
-  <div class="tabs">
-    <button class="tab-btn active" onclick="setHistTab('servicos')" id="tab-servicos">🚗 Serviços</button>
-    <button class="tab-btn" onclick="setHistTab('despesas')" id="tab-despesas">💸 Despesas</button>
-  </div>
-
-  <!-- FILTROS SERVIÇOS -->
-  <div id="filtros-servicos" class="filters-bar">
-    <input type="date" id="f-s-ini" placeholder="De">
-    <input type="date" id="f-s-fim" placeholder="Até">
-    <select id="f-s-status">
-      <option value="">Todos os status</option>
-      <option value="pago">Pago</option>
-      <option value="nao-pago">Não Pago</option>
-    </select>
-    <select id="f-s-tipo">
-      <option value="">Todos os tipos</option>
-    </select>
-    <input type="text" id="f-s-busca" placeholder="🔍 Buscar cliente ou carro">
-    <button class="period-btn" onclick="renderHistorico()" style="flex:none">Filtrar</button>
-  </div>
-
-  <!-- FILTROS DESPESAS -->
-  <div id="filtros-despesas" class="filters-bar" style="display:none">
-    <input type="date" id="f-d-ini" placeholder="De">
-    <input type="date" id="f-d-fim" placeholder="Até">
-    <select id="f-d-cat">
-      <option value="">Todas as categorias</option>
-    </select>
-    <input type="text" id="f-d-busca" placeholder="🔍 Buscar descrição">
-    <button class="period-btn" onclick="renderHistorico()" style="flex:none">Filtrar</button>
-  </div>
-
-  <div class="hist-table-wrap">
-    <div id="hist-list"></div>
-    <div class="hist-footer">
-      <span id="hist-count">0 registros</span>
-      <span>Total: <strong id="hist-total">R$ 0,00</strong></span>
-    </div>
-  </div>
-</div>
 
 </main>
 
-<!-- ===================== MODAL CONFIRMAÇÃO ===================== -->
+<!-- MODAL CONFIRMAÇÃO -->
 <div class="modal-overlay" id="modal-confirm">
   <div class="modal">
     <h3 id="modal-title">Confirmar ação</h3>
@@ -251,20 +271,20 @@
   </div>
 </div>
 
-<!-- ===================== MODAL CONFIGURAÇÕES ===================== -->
+<!-- MODAL CONFIGURAÇÕES -->
 <div class="modal-overlay config-modal" id="modal-config">
-  <div class="modal" style="max-width:560px;max-height:90vh;overflow-y:auto;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+  <div class="modal config-modal-inner">
+    <div class="config-modal-head">
       <h3>⚙️ Configurações</h3>
-      <button onclick="closeConfig()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;">✕</button>
+      <button onclick="closeConfig()" class="btn-close-modal">✕</button>
     </div>
 
     <div class="config-section">
-      <h4>🧽 Tipos de Lavagem</h4>
+      <h4>🧽 Tipos de Serviço</h4>
       <div class="config-list" id="config-tipos-list"></div>
       <div class="config-add">
         <input type="text" id="novo-tipo-nome" placeholder="Nome do tipo">
-        <input type="number" id="novo-tipo-preco" placeholder="Preço R$" style="max-width:100px;" step="0.01" min="0">
+        <input type="number" id="novo-tipo-preco" placeholder="Preço R$" step="0.01" min="0" style="max-width:110px">
         <button class="btn-add" onclick="addTipo()">+ Add</button>
       </div>
     </div>
@@ -280,16 +300,15 @@
 
     <div class="config-section">
       <h4>📤 Exportar Dados</h4>
-      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">Exportar relatório do período atual</p>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px">Exportar relatório do período selecionado no Dashboard</p>
       <div class="export-btns">
         <button class="btn-export" onclick="exportCSV()">⬇️ Exportar CSV</button>
-        <button class="btn-export" onclick="exportPrint()">🖨️ Exportar / Imprimir</button>
+        <button class="btn-export" onclick="exportPrint()">🖨️ Imprimir / PDF</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script src="app.js"></script>
