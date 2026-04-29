@@ -6,9 +6,47 @@
 <title>LavaJato — Sistema de Gestão</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://wbaubjaqtgjrgwopwlkw.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndiYXViamFxdGdqcmd3b3B3bGt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0ODUxNDAsImV4cCI6MjA5MzA2MTE0MH0.8NPZ0iObrHPaW7RotB7DZuRDVOeMsfHM5Be68mNlJBE';
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
+
+  <!-- TELA DE LOGIN -->
+  <div id="tela-login" style="
+    position:fixed;inset:0;background:#0f1117;z-index:99999;
+    display:flex;align-items:center;justify-content:center;padding:20px;">
+    <div style="
+      background:#161b27;border:1px solid #2a3248;border-radius:14px;
+      padding:36px;max-width:360px;width:100%;text-align:center;">
+      <div style="font-size:2.5rem;margin-bottom:12px">🚿</div>
+      <h2 style="font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:6px">LavaJato</h2>
+      <p style="color:#8896b0;font-size:0.85rem;margin-bottom:28px">Digite a senha para continuar</p>
+      <input id="login-senha" type="password" placeholder="Senha"
+        style="width:100%;background:#1e2535;border:1px solid #2a3248;border-radius:8px;
+              color:#e8edf5;padding:12px 14px;font-size:0.95rem;outline:none;
+              font-family:'DM Sans',sans-serif;margin-bottom:12px;text-align:center;letter-spacing:3px"
+        onkeydown="if(event.key==='Enter') fazerLogin()">
+      <button onclick="fazerLogin()" style="
+        width:100%;padding:13px;background:#3be8a0;color:#0f1117;border:none;
+        border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;
+        font-size:1rem;cursor:pointer;">Entrar</button>
+      <p id="login-erro" style="color:#f87171;font-size:0.82rem;margin-top:12px;display:none">
+        Senha incorreta. Tente novamente.
+      </p>
+    </div>
+  </div>
+
+  <div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,17,23,0.8);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+    <div style="width:36px;height:36px;border:3px solid #2a3248;border-top-color:#3be8a0;border-radius:50%;animation:spin 0.7s linear infinite;"></div>
+    <span style="color:#8896b0;font-size:0.85rem;">Carregando...</span>
+  </div>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 
 <!-- NAVBAR -->
 <nav class="navbar">

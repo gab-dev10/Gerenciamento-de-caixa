@@ -1,32 +1,82 @@
-// ===================== BANCO DE DADOS LOCAL =====================
-const DB = {
-  get: (k, def) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } },
-  set: (k, v) => localStorage.setItem(k, JSON.stringify(v))
-};
+// ===================== SUPABASE =====================
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+ 
+let servicos     = [];
+let despesas     = [];
+let tiposLavagem = [];
+let categorias   = [];
+ 
+// Carrega todos os dados do banco ao iniciar
+async function loadAll() {
+  showLoading(true);
+  try {
+    const [s, d, t, c] = await Promise.all([
+      db.from('servicos').select('*').order('criado_em', { ascending: false }),
+      db.from('despesas').select('*').order('criado_em', { ascending: false }),
+      db.from('tipos_lavagem').select('*'),
+      db.from('categorias').select('*')
+    ]);
+    servicos     = s.data || [];
+    despesas     = d.data || [];
+    tiposLavagem = t.data || [];
+    categorias   = c.data || [];
+  } catch (e) {
+    showToast('Erro ao carregar dados', 'error');
+  }
+  showLoading(false);
+}
+ 
+// Funções de escrita no banco
+async function dbInsert(table, obj) {
+  const { error } = await db.from(table).insert(obj);
+  if (error) throw error;
+}
+ 
+async function dbUpdate(table, id, obj) {
+  const { error } = await db.from(table).update(obj).eq('id', id);
+  if (error) throw error;
+}
+ 
+async function dbDelete(table, id) {
+  const { error } = await db.from(table).delete().eq('id', id);
+  if (error) throw error;
+}
+ 
+// Loading overlay
+function showLoading(show) {
+  document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+}
 
-let servicos   = DB.get('lj_servicos', []);
-let despesas   = DB.get('lj_despesas', []);
+// ===================== LOGIN =====================
+async function fazerLogin() {
+  const senha = document.getElementById('login-senha').value;
+  if (!senha) return;
 
-let tiposLavagem = DB.get('lj_tipos', [
-  { id: 't1', nome: 'Lavagem — Carro Pequeno',          preco: 70,  ativo: true },
-  { id: 't2', nome: 'Lavagem — Carro Grande',           preco: 90,  ativo: true },
-  { id: 't3', nome: 'Lavagem e Lubrificação — Pequeno', preco: 120, ativo: true },
-  { id: 't4', nome: 'Lavagem e Lubrificação — Grande',  preco: 150, ativo: true },
-  { id: 't5', nome: 'Higienização',                     preco: 220, ativo: true }
-]);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(senha));
+  const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-let categorias = DB.get('lj_cats', [
-  { id: 'c1', nome: 'Produtos de Limpeza', ativo: true },
-  { id: 'c2', nome: 'Manutenção',          ativo: true },
-  { id: 'c3', nome: 'Equipamentos',        ativo: true },
-  { id: 'c4', nome: 'Acessórios',          ativo: true }
-]);
+  const { data, error } = await db.from('config').select('valor').eq('chave', 'senha_hash').single();
 
-function save() {
-  DB.set('lj_servicos',  servicos);
-  DB.set('lj_despesas',  despesas);
-  DB.set('lj_tipos',     tiposLavagem);
-  DB.set('lj_cats',      categorias);
+  if (error || !data || data.valor !== hashHex) {
+    document.getElementById('login-erro').style.display = 'block';
+    document.getElementById('login-senha').value = '';
+    return;
+  }
+
+  sessionStorage.setItem('lj_auth', '1');
+  document.getElementById('tela-login').style.display = 'none';
+  await loadAll();
+  populateFormSelects();
+  refreshDashboard();
+}
+
+function verificarLogin() {
+  if (sessionStorage.getItem('lj_auth') !== '1') {
+    document.getElementById('tela-login').style.display = 'flex';
+    return false;
+  }
+  document.getElementById('tela-login').style.display = 'none';
+  return true;
 }
 
 // ===================== UTILITÁRIOS =====================
@@ -170,7 +220,8 @@ function detectarAgendamento() {
   }
 }
 
-function salvarServico() {
+// ===================== SALVAR SERVIÇO =====================
+async function salvarServico() {
   const data      = document.getElementById('s-data').value;
   const cliente   = document.getElementById('s-cliente').value.trim();
   const carro     = document.getElementById('s-carro').value.trim();
@@ -178,16 +229,15 @@ function salvarServico() {
   const preco     = parseFloat(document.getElementById('s-preco').value);
   const pagamento = document.getElementById('s-pagamento').value;
   const obs       = document.getElementById('s-obs').value.trim();
-
+ 
   if (!data || !cliente || !carro || !tipo || isNaN(preco)) {
     showToast('Preencha todos os campos obrigatórios!', 'error');
     return;
   }
-
-  const agendado = isFuture(data);
-  // Se for agendamento, força status "nao-pago"
+ 
+  const agendado    = isFuture(data);
   const statusFinal = agendado ? 'nao-pago' : currentStatus;
-
+ 
   const obj = {
     id: editingId || uid(),
     data, cliente, carro,
@@ -198,50 +248,67 @@ function salvarServico() {
     obs,
     criado_em: editingId ? undefined : today()
   };
-
-  if (editingId) {
-    const idx = servicos.findIndex(s => s.id === editingId);
-    servicos[idx] = { ...servicos[idx], ...obj };
-    showToast(agendado ? '📅 Agendamento atualizado!' : '✅ Serviço atualizado!');
-    cancelEdit();
-  } else {
-    obj.criado_em = today();
-    servicos.unshift(obj);
-    showToast(agendado ? '📅 Agendamento registrado!' : '✅ Serviço salvo com sucesso!');
-    limparFormServico();
+ 
+  try {
+    showLoading(true);
+    if (editingId) {
+      await dbUpdate('servicos', editingId, obj);
+      const idx = servicos.findIndex(s => s.id === editingId);
+      servicos[idx] = { ...servicos[idx], ...obj };
+      showToast(agendado ? '📅 Agendamento atualizado!' : '✅ Serviço atualizado!');
+      cancelEdit();
+    } else {
+      obj.criado_em = today();
+      await dbInsert('servicos', obj);
+      servicos.unshift(obj);
+      showToast(agendado ? '📅 Agendamento registrado!' : '✅ Serviço salvo!');
+      limparFormServico();
+    }
+  } catch (e) {
+    showToast('Erro ao salvar serviço', 'error');
   }
-
-  save();
+  showLoading(false);
   refreshDashboard();
 }
-
-function salvarDespesa() {
+ 
+// ===================== SALVAR DESPESA =====================
+async function salvarDespesa() {
   const data  = document.getElementById('d-data').value;
   const cat   = document.getElementById('d-categoria').value;
   const desc  = document.getElementById('d-descricao').value.trim();
   const valor = parseFloat(document.getElementById('d-valor').value);
   const obs   = document.getElementById('d-obs').value.trim();
-
+ 
   if (!data || !cat || !desc || isNaN(valor)) {
     showToast('Preencha todos os campos obrigatórios!', 'error');
     return;
   }
-
-  const obj = { id: editingId || uid(), data, categoria_id: cat, descricao: desc, valor, obs };
-
-  if (editingId) {
-    const idx = despesas.findIndex(d => d.id === editingId);
-    despesas[idx] = { ...despesas[idx], ...obj };
-    showToast('✅ Despesa atualizada!');
-    cancelEdit();
-  } else {
-    obj.criado_em = today();
-    despesas.unshift(obj);
-    showToast('✅ Despesa salva com sucesso!');
-    limparFormDespesa();
+ 
+  const obj = {
+    id: editingId || uid(),
+    data, categoria_id: cat,
+    descricao: desc, valor, obs
+  };
+ 
+  try {
+    showLoading(true);
+    if (editingId) {
+      await dbUpdate('despesas', editingId, obj);
+      const idx = despesas.findIndex(d => d.id === editingId);
+      despesas[idx] = { ...despesas[idx], ...obj };
+      showToast('✅ Despesa atualizada!');
+      cancelEdit();
+    } else {
+      obj.criado_em = today();
+      await dbInsert('despesas', obj);
+      despesas.unshift(obj);
+      showToast('✅ Despesa salva!');
+      limparFormDespesa();
+    }
+  } catch (e) {
+    showToast('Erro ao salvar despesa', 'error');
   }
-
-  save();
+  showLoading(false);
   refreshDashboard();
 }
 
@@ -462,13 +529,20 @@ function mkChart(id, type, data, options) {
 function marcarPago(id) {
   openModal(
     'Confirmar Pagamento',
-    `Marcar como pago? A data de pagamento será registrada como hoje (${fmtDate(today())}).`,
-    () => {
-      const s = servicos.find(x => x.id === id);
-      if (s) { s.status = 'pago'; s.agendado = false; s.data_pagamento = today(); }
-      save();
+    `Marcar como pago? A data será registrada como hoje (${fmtDate(today())}).`,
+    async () => {
+      try {
+        showLoading(true);
+        const updates = { status: 'pago', agendado: false, data_pagamento: today() };
+        await dbUpdate('servicos', id, updates);
+        const s = servicos.find(x => x.id === id);
+        if (s) Object.assign(s, updates);
+        showToast('✅ Serviço marcado como pago!');
+      } catch (e) {
+        showToast('Erro ao atualizar', 'error');
+      }
+      showLoading(false);
       refreshDashboard();
-      showToast('✅ Serviço marcado como pago!');
     },
     'green'
   );
@@ -610,19 +684,37 @@ function editarDespesa(id) {
   }, 100);
 }
 
+// ===================== DELETAR SERVIÇO =====================
 function deletarServico(id) {
-  openModal('Excluir Serviço', 'Tem certeza? Esta ação não pode ser desfeita.', () => {
-    servicos = servicos.filter(s => s.id !== id);
-    save(); renderHistorico(); refreshDashboard();
-    showToast('Serviço excluído.');
+  openModal('Excluir Serviço', 'Tem certeza? Esta ação não pode ser desfeita.', async () => {
+    try {
+      showLoading(true);
+      await dbDelete('servicos', id);
+      servicos = servicos.filter(s => s.id !== id);
+      showToast('Serviço excluído.');
+    } catch (e) {
+      showToast('Erro ao excluir', 'error');
+    }
+    showLoading(false);
+    renderHistorico();
+    refreshDashboard();
   });
 }
-
+ 
+// ===================== DELETAR DESPESA =====================
 function deletarDespesa(id) {
-  openModal('Excluir Despesa', 'Tem certeza? Esta ação não pode ser desfeita.', () => {
-    despesas = despesas.filter(d => d.id !== id);
-    save(); renderHistorico(); refreshDashboard();
-    showToast('Despesa excluída.');
+  openModal('Excluir Despesa', 'Tem certeza? Esta ação não pode ser desfeita.', async () => {
+    try {
+      showLoading(true);
+      await dbDelete('despesas', id);
+      despesas = despesas.filter(d => d.id !== id);
+      showToast('Despesa excluída.');
+    } catch (e) {
+      showToast('Erro ao excluir', 'error');
+    }
+    showLoading(false);
+    renderHistorico();
+    refreshDashboard();
   });
 }
 
@@ -678,34 +770,60 @@ function renderConfigLists() {
   ).join('') || '<div style="color:var(--muted);font-size:0.82rem">Nenhuma categoria cadastrada</div>';
 }
 
-function addTipo() {
+// ===================== ADICIONAR TIPO =====================
+async function addTipo() {
   const nome  = document.getElementById('novo-tipo-nome').value.trim();
   const preco = parseFloat(document.getElementById('novo-tipo-preco').value) || 0;
   if (!nome) { showToast('Informe o nome do tipo', 'error'); return; }
-  tiposLavagem.push({ id: uid(), nome, preco, ativo: true });
-  save(); renderConfigLists();
-  document.getElementById('novo-tipo-nome').value  = '';
-  document.getElementById('novo-tipo-preco').value = '';
-  showToast('Tipo adicionado!');
+  const obj = { id: uid(), nome, preco, ativo: true };
+  try {
+    await dbInsert('tipos_lavagem', obj);
+    tiposLavagem.push(obj);
+    renderConfigLists();
+    document.getElementById('novo-tipo-nome').value  = '';
+    document.getElementById('novo-tipo-preco').value = '';
+    showToast('Tipo adicionado!');
+  } catch (e) {
+    showToast('Erro ao adicionar tipo', 'error');
+  }
+}
+ 
+// ===================== DELETAR TIPO =====================
+async function delTipo(id) {
+  try {
+    await dbUpdate('tipos_lavagem', id, { ativo: false });
+    tiposLavagem = tiposLavagem.map(t => t.id === id ? { ...t, ativo: false } : t);
+    renderConfigLists();
+  } catch (e) {
+    showToast('Erro ao remover tipo', 'error');
+  }
 }
 
-function delTipo(id) {
-  tiposLavagem = tiposLavagem.map(t => t.id === id ? { ...t, ativo: false } : t);
-  save(); renderConfigLists();
-}
-
-function addCategoria() {
+// ===================== ADICIONAR CATEGORIA =====================
+async function addCategoria() {
   const nome = document.getElementById('nova-cat-nome').value.trim();
   if (!nome) { showToast('Informe o nome da categoria', 'error'); return; }
-  categorias.push({ id: uid(), nome, ativo: true });
-  save(); renderConfigLists();
-  document.getElementById('nova-cat-nome').value = '';
-  showToast('Categoria adicionada!');
+  const obj = { id: uid(), nome, ativo: true };
+  try {
+    await dbInsert('categorias', obj);
+    categorias.push(obj);
+    renderConfigLists();
+    document.getElementById('nova-cat-nome').value = '';
+    showToast('Categoria adicionada!');
+  } catch (e) {
+    showToast('Erro ao adicionar categoria', 'error');
+  }
 }
-
-function delCat(id) {
-  categorias = categorias.map(c => c.id === id ? { ...c, ativo: false } : c);
-  save(); renderConfigLists();
+ 
+// ===================== DELETAR CATEGORIA =====================
+async function delCat(id) {
+  try {
+    await dbUpdate('categorias', id, { ativo: false });
+    categorias = categorias.map(c => c.id === id ? { ...c, ativo: false } : c);
+    renderConfigLists();
+  } catch (e) {
+    showToast('Erro ao remover categoria', 'error');
+  }
 }
 
 // ===================== EXPORTAR =====================
@@ -781,23 +899,24 @@ function exportPrint() {
 }
 
 // ===================== INIT =====================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('s-data').value = today();
   document.getElementById('d-data').value = today();
   document.getElementById('today-label').textContent =
     new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
-
-  // Detecta agendamento ao mudar a data
+ 
   document.getElementById('s-data').addEventListener('change', detectarAgendamento);
-
-  // Fechar modais ao clicar fora
+ 
   document.getElementById('modal-confirm').addEventListener('click', e => {
     if (e.target.id === 'modal-confirm') closeModal();
   });
   document.getElementById('modal-config').addEventListener('click', e => {
     if (e.target.id === 'modal-config') closeConfig();
   });
+ 
+  if (!verificarLogin()) return;
 
+  await loadAll();          // carrega do Supabase
   populateFormSelects();
   refreshDashboard();
 });
