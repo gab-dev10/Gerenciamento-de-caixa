@@ -924,6 +924,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Registra o Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('Gerenciamento-de-caixa/sw.js');
+    navigator.serviceWorker.register('/Gerenciamento-de-caixa/sw.js');
   });
 }
