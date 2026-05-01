@@ -55,7 +55,7 @@
 
 <!-- NAVBAR -->
 <nav class="navbar">
-  <div class="nav-brand">
+  <div class="nav-brand" onclick="goPage('dashboard')" style="cursor:pointer">
     <span style="font-size:1.4rem">🚿</span>
     <span class="nav-brand-text">LavaJato</span>
   </div>
@@ -308,7 +308,7 @@
     <h3 id="modal-title">Confirmar ação</h3>
     <p id="modal-msg">Tem certeza? Esta ação não pode ser desfeita.</p>
     <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-cancel" id="modal-cancel-txt" onclick="closeModal()">Cancelar</button>
       <button class="btn-confirm" id="modal-ok" onclick="confirmAction()">Confirmar</button>
     </div>
   </div>

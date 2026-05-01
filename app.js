@@ -589,7 +589,7 @@ function renderHistorico() {
       const badgeCls  = isAgend ? 'agendado' : (s.status === 'pago' ? 'pago' : 'nao-pago');
       const dotCls    = isAgend ? 'blue' : (s.status === 'pago' ? 'green' : 'yellow');
 
-      return `<div class="hist-item">
+      return `<div class="hist-item" onclick="verServico('${s.id}')" style="cursor:pointer">
         <div class="dot ${dotCls}"></div>
         <div class="hist-info">
           <div class="hist-main">${s.cliente} — ${s.carro}</div>
@@ -598,8 +598,8 @@ function renderHistorico() {
         <span class="badge ${badgeCls}">${statusTxt}</span>
         <div class="hist-value green">${fmt(s.preco)}</div>
         <div class="hist-actions">
-          <button class="btn-icon" onclick="editarServico('${s.id}')">✏️</button>
-          <button class="btn-icon del" onclick="deletarServico('${s.id}')">🗑️</button>
+          <button class="btn-icon" onclick="event.stopPropagation();editarServico('${s.id}')">✏️</button>
+          <button class="btn-icon del" onclick="event.stopPropagation();deletarServico('${s.id}')">🗑️</button>
         </div>
       </div>`;
     });
@@ -623,7 +623,7 @@ function renderHistorico() {
 
     items = data.map(d => {
       const c = categorias.find(x => x.id === d.categoria_id);
-      return `<div class="hist-item">
+      return `<div class="hist-item" onclick="verDespesa('${d.id}')" style="cursor:pointer">
         <div class="dot red"></div>
         <div class="hist-info">
           <div class="hist-main">${d.descricao}</div>
@@ -631,8 +631,8 @@ function renderHistorico() {
         </div>
         <div class="hist-value red">${fmt(d.valor)}</div>
         <div class="hist-actions">
-          <button class="btn-icon" onclick="editarDespesa('${d.id}')">✏️</button>
-          <button class="btn-icon del" onclick="deletarDespesa('${d.id}')">🗑️</button>
+          <button class="btn-icon" onclick="event.stopPropagation();editarDespesa('${d.id}')">✏️</button>
+          <button class="btn-icon del" onclick="event.stopPropagation();deletarDespesa('${d.id}')">🗑️</button>
         </div>
       </div>`;
     });
@@ -684,6 +684,54 @@ function editarDespesa(id) {
   }, 100);
 }
 
+function verServico(id) {
+  const s = servicos.find(x => x.id === id);
+  if (!s) return;
+  const t = tiposLavagem.find(x => x.id === s.tipo_id);
+  document.getElementById('modal-title').textContent   = `${s.cliente} — ${s.carro}`;
+  document.getElementById('modal-msg').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm)">
+        <span style="color:var(--muted);font-size:0.8rem">📅 Data</span>
+        <span style="font-weight:500">${fmtDate(s.data)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm)">
+        <span style="color:var(--muted);font-size:0.8rem">🧽 Serviço</span>
+        <span style="font-weight:500">${t ? t.nome : '—'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm)">
+        <span style="color:var(--muted);font-size:0.8rem">💰 Preço</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--green)">${fmt(s.preco)}</span>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal-ok').style.display    = 'none';
+  document.getElementById('modal-cancel-txt').textContent = 'Fechar';
+  document.getElementById('modal-confirm').classList.add('open');
+}
+
+function verDespesa(id) {
+  const d = despesas.find(x => x.id === id);
+  if (!d) return;
+  const c = categorias.find(x => x.id === d.categoria_id);
+  document.getElementById('modal-title').textContent = `${d.descricao} — ${c ? c.nome : '—'}`;
+  document.getElementById('modal-msg').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm)">
+        <span style="color:var(--muted);font-size:0.8rem">💸 Valor</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--red)">${fmt(d.valor)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm)">
+        <span style="color:var(--muted);font-size:0.8rem">📝 Observações</span>
+        <span style="font-weight:500">${d.obs || '—'}</span>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal-ok').style.display    = 'none';
+  document.getElementById('modal-cancel-txt').textContent = 'Fechar';
+  document.getElementById('modal-confirm').classList.add('open');
+}
+
 // ===================== DELETAR SERVIÇO =====================
 function deletarServico(id) {
   openModal('Excluir Serviço', 'Tem certeza? Esta ação não pode ser desfeita.', async () => {
@@ -732,6 +780,8 @@ function openModal(title, msg, action, btnClass = '') {
 
 function closeModal() {
   document.getElementById('modal-confirm').classList.remove('open');
+  document.getElementById('modal-ok').style.display = 'block';
+  document.getElementById('modal-cancel-txt').textContent = 'Cancelar';
   pendingAction = null;
 }
 
@@ -921,7 +971,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   refreshDashboard();
 });
 
-// Registra o Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/Gerenciamento-de-caixa/sw.js');
