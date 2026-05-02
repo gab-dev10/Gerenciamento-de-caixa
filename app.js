@@ -82,7 +82,10 @@ function verificarLogin() {
 // ===================== UTILITÁRIOS =====================
 const fmt    = v => 'R$ ' + (v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 const uid    = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
-const today  = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
 const isFuture = dateStr => dateStr > today();
 
 function fmtDate(d) {
@@ -574,7 +577,11 @@ function renderHistorico() {
 
     if (ini)    data = data.filter(s => s.data >= ini);
     if (fim)    data = data.filter(s => s.data <= fim);
-    if (status) data = data.filter(s => s.status === status);
+    if (status === 'agendado') {
+      data = data.filter(s => s.agendado && isFuture(s.data));
+    } else if (status) {
+      data = data.filter(s => s.status === status && !(s.agendado && isFuture(s.data)));
+    }
     if (tipo)   data = data.filter(s => s.tipo_id === tipo);
     if (busca)  data = data.filter(s =>
       s.cliente.toLowerCase().includes(busca) || s.carro.toLowerCase().includes(busca)
