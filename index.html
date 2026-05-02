@@ -267,8 +267,14 @@
     </div>
 
     <div id="filtros-servicos" class="filters-bar">
-      <input type="date" id="f-s-ini">
-      <input type="date" id="f-s-fim">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px">De</span>
+        <input type="date" id="f-s-ini">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px">Até</span>
+        <input type="date" id="f-s-fim">
+      </div>
       <select id="f-s-status">
         <option value="">Todos os status</option>
         <option value="pago">Pago</option>
@@ -283,8 +289,14 @@
     </div>
 
     <div id="filtros-despesas" class="filters-bar" style="display:none">
-      <input type="date" id="f-d-ini">
-      <input type="date" id="f-d-fim">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px">De</span>
+        <input type="date" id="f-d-ini">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px">Até</span>
+        <input type="date" id="f-d-fim">
+      </div>
       <select id="f-d-cat">
         <option value="">Todas as categorias</option>
       </select>
