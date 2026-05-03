@@ -568,7 +568,7 @@ function renderHistorico() {
   let items = [], total = 0;
 
   if (histTab === 'servicos') {
-    let data   = [...servicos];
+    let data = [...servicos].sort((a, b) => b.data.localeCompare(a.data));
     const ini   = document.getElementById('f-s-ini').value;
     const fim   = document.getElementById('f-s-fim').value;
     const status = document.getElementById('f-s-status').value;
@@ -615,7 +615,7 @@ function renderHistorico() {
     document.getElementById('hist-total').textContent = fmt(total);
 
   } else {
-    let data   = [...despesas];
+    let data = [...despesas].sort((a, b) => b.data.localeCompare(a.data));
     const ini   = document.getElementById('f-d-ini').value;
     const fim   = document.getElementById('f-d-fim').value;
     const cat   = document.getElementById('f-d-cat').value;
