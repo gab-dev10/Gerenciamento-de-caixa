@@ -157,6 +157,7 @@ function goPage(name) {
   if (name === 'dashboard')   refreshDashboard();
   if (name === 'historico')   renderHistorico();
   if (name === 'lancamentos') populateFormSelects();
+  if (name === 'agenda') { calAno = new Date().getFullYear(); calMes = new Date().getMonth(); renderCalendario(); }
 }
 
 // ===================== LANÇAMENTOS =====================
@@ -977,6 +978,114 @@ document.addEventListener('DOMContentLoaded', async () => {
   populateFormSelects();
   refreshDashboard();
 });
+
+// ===================== AGENDA =====================
+let calAno  = new Date().getFullYear();
+let calMes  = new Date().getMonth();
+
+function mudarMes(dir) {
+  calMes += dir;
+  if (calMes > 11) { calMes = 0;  calAno++; }
+  if (calMes < 0)  { calMes = 11; calAno--; }
+  renderCalendario();
+}
+
+function renderCalendario() {
+  const grid     = document.getElementById('calendar-grid');
+  const label    = document.getElementById('cal-mes-label');
+  const tdHoje   = today();
+
+  label.textContent = new Date(calAno, calMes, 1)
+    .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  const primeiroDia = new Date(calAno, calMes, 1).getDay();
+  const totalDias   = new Date(calAno, calMes + 1, 0).getDate();
+
+  grid.innerHTML = '';
+
+  // Células vazias antes do dia 1
+  for (let i = 0; i < primeiroDia; i++) {
+    grid.innerHTML += `<div class="cal-day vazio"></div>`;
+  }
+
+  // Dias do mês
+  for (let d = 1; d <= totalDias; d++) {
+    const dateStr   = `${calAno}-${String(calMes + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isHoje    = dateStr === tdHoje;
+    const servsDia  = servicos.filter(s => s.data === dateStr);
+    const temServico = servsDia.length > 0;
+
+    const agendados  = servsDia.filter(s => s.agendado && s.data > tdHoje);
+    const realizados = servsDia.filter(s => !s.agendado || s.data <= tdHoje);
+
+    let chips = '';
+
+    // Agendados primeiro
+    agendados.forEach(s => {
+      chips += `<div class="cal-chip agendado">📅 ${s.cliente}</div>`;
+    });
+
+    // Realizados depois
+    realizados.forEach(s => {
+      chips += `<div class="cal-chip realizado">✓ ${s.cliente}</div>`;
+    });
+
+    grid.innerHTML += `
+      <div class="cal-day ${isHoje ? 'hoje' : ''} ${!temServico ? 'sem-servico' : ''}"
+           onclick="${temServico ? `abrirDiaModal('${dateStr}')` : ''}">
+        <div class="cal-day-num">${d}</div>
+        <div class="cal-chips">${chips}</div>
+      </div>`;
+  }
+}
+
+function abrirDiaModal(dateStr) {
+  const tdHoje    = today();
+  const servsDia  = servicos.filter(s => s.data === dateStr);
+  const agendados  = servsDia.filter(s => s.agendado && s.data > tdHoje);
+  const realizados = servsDia.filter(s => !s.agendado || s.data <= tdHoje);
+
+  const [ano, mes, dia] = dateStr.split('-');
+  const label = `${dia}/${mes}/${ano}`;
+
+  let html = `<div class="cal-modal-date">📆 ${label}</div>`;
+
+  if (agendados.length > 0) {
+    html += `<div class="cal-section-title agendado">📅 Agendados</div>`;
+    agendados.forEach(s => {
+      const t = tiposLavagem.find(x => x.id === s.tipo_id);
+      html += `
+        <div class="cal-servico-item">
+          <div class="cal-servico-info">
+            <div class="cal-servico-nome">${s.cliente} — ${s.carro}</div>
+            <div class="cal-servico-tipo">${t ? t.nome : '—'}</div>
+          </div>
+          <div class="cal-servico-valor" style="color:var(--blue)">${fmt(s.preco)}</div>
+        </div>`;
+    });
+  }
+
+  if (realizados.length > 0) {
+    html += `<div class="cal-section-title realizado">✅ Realizados</div>`;
+    realizados.forEach(s => {
+      const t = tiposLavagem.find(x => x.id === s.tipo_id);
+      html += `
+        <div class="cal-servico-item">
+          <div class="cal-servico-info">
+            <div class="cal-servico-nome">${s.cliente} — ${s.carro}</div>
+            <div class="cal-servico-tipo">${t ? t.nome : '—'}</div>
+          </div>
+          <div class="cal-servico-valor" style="color:var(--green)">${fmt(s.preco)}</div>
+        </div>`;
+    });
+  }
+
+  document.getElementById('modal-title').textContent  = 'Serviços do dia';
+  document.getElementById('modal-msg').innerHTML      = html;
+  document.getElementById('modal-ok').style.display   = 'none';
+  document.getElementById('modal-cancel-txt').textContent = 'Fechar';
+  document.getElementById('modal-confirm').classList.add('open');
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
