@@ -109,13 +109,14 @@ let customStart = null, customEnd = null;
 function getPeriodDates() {
   const now = new Date();
   let start, end;
+  
   if (currentPeriod === 'semana') {
-    const day = now.getDay();
+    const day = now.getDay(); // 0 = domingo, 6 = sábado
     start = new Date(now);
-    start.setDate(now.getDate() - day + (day === 0 ? -6 : 1));
+    start.setDate(now.getDate() - day); // volta até domingo
     end = new Date(start);
-    end.setDate(start.getDate() + 6);
-  } else if (currentPeriod === 'mes') {
+    end.setDate(start.getDate() + 6); // vai até sábado
+} else if (currentPeriod === 'mes') {
     start = new Date(now.getFullYear(), now.getMonth(), 1);
     end   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   } else if (currentPeriod === 'mes_ant') {
