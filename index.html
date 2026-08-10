@@ -192,13 +192,17 @@
         </div>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" style="position:relative">
         <label>Cliente <span class="req">*</span></label>
-        <input type="text" id="s-cliente" placeholder="Nome do cliente">
+        <input type="text" id="s-cliente" placeholder="Nome do cliente" 
+          autocomplete="off" oninput="onClienteInput()">
+        <div id="cliente-suggestions" class="autocomplete-list" style="display:none"></div>
       </div>
-      <div class="form-group">
+      
+      <div class="form-group" style="position:relative">
         <label>Carro <span class="req">*</span></label>
-        <input type="text" id="s-carro" placeholder="Modelo e/ou placa">
+        <input type="text" id="s-carro" placeholder="Modelo e/ou placa" autocomplete="off">
+        <div id="carro-suggestions" class="autocomplete-list" style="display:none"></div>
       </div>
 
       <div class="form-row">

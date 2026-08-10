@@ -327,6 +327,8 @@ function limparFormServico() {
   document.getElementById('s-obs').value      = '';
   document.getElementById('agendamento-banner').style.display = 'none';
   setStatus('pago');
+  document.getElementById('cliente-suggestions').style.display = 'none';
+  document.getElementById('carro-suggestions').style.display = 'none';
 }
 
 function limparFormDespesa() {
@@ -956,6 +958,71 @@ function exportPrint() {
   <button class="no-print" onclick="window.print()">🖨️ Imprimir</button>
   </body></html>`);
 }
+
+// ===================== AUTOCOMPLETE CLIENTE/CARRO =====================
+function onClienteInput() {
+  const val = document.getElementById('s-cliente').value.trim().toLowerCase();
+  const box  = document.getElementById('cliente-suggestions');
+
+  // Esconde sugestões de carro ao digitar cliente
+  document.getElementById('carro-suggestions').style.display = 'none';
+
+  if (val.length < 1) { box.style.display = 'none'; return; }
+
+  // Pega nomes únicos que começam com o digitado
+  const nomes = [...new Set(
+    servicos
+      .map(s => s.cliente)
+      .filter(n => n.toLowerCase().startsWith(val))
+  )].slice(0, 6);
+
+  if (nomes.length === 0) { box.style.display = 'none'; return; }
+
+  box.innerHTML = nomes.map(n =>
+    `<div class="autocomplete-item" onclick="selecionarCliente('${n.replace(/'/g, "\\'")}')">${n}</div>`
+  ).join('');
+
+  box.style.display = 'block';
+}
+
+function selecionarCliente(nome) {
+  document.getElementById('s-cliente').value = nome;
+  document.getElementById('cliente-suggestions').style.display = 'none';
+
+  const carros = [...new Set(
+    servicos
+      .filter(s => s.cliente === nome)
+      .map(s => s.carro)
+  )];
+
+  if (carros.length === 0) return;
+
+  setTimeout(() => {
+    const carroBox = document.getElementById('carro-suggestions');
+
+    carroBox.innerHTML = carros.map(c =>
+      `<div class="autocomplete-item carro" onclick="selecionarCarro('${c.replace(/'/g, "\\'")}')">${c}</div>`
+    ).join('') + `<div class="autocomplete-novo">Ou digite um carro novo abaixo</div>`;
+
+    carroBox.style.display = 'block';
+    document.getElementById('s-carro').focus();
+  }, 100);
+}
+
+function selecionarCarro(carro) {
+  document.getElementById('s-carro').value = carro;
+  document.getElementById('carro-suggestions').style.display = 'none';
+}
+
+// Fecha autocomplete ao clicar fora
+document.addEventListener('click', e => {
+  if (!e.target.closest('#s-cliente') && !e.target.closest('#cliente-suggestions')) {
+    document.getElementById('cliente-suggestions').style.display = 'none';
+  }
+  if (!e.target.closest('#s-carro') && !e.target.closest('#carro-suggestions')) {
+    document.getElementById('carro-suggestions').style.display = 'none';
+  }
+});
 
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', async () => {
