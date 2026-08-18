@@ -96,6 +96,7 @@
       <button class="period-btn active" onclick="setPeriod('mes', event)">Este Mês</button>
       <button class="period-btn" onclick="setPeriod('semana', event)">Esta Semana</button>
       <button class="period-btn" onclick="setPeriod('mes_ant', event)">Mês Anterior</button>
+      <button class="period-btn" onclick="setPeriod('ano', event)">Este Ano</button>
       <button class="period-btn" onclick="setPeriod('custom', event)">Personalizado</button>
     </div>
     <div id="period-custom-bar" class="period-custom" style="display:none">
@@ -144,6 +145,13 @@
         <div class="chart-title">📦 Despesas por Categoria</div>
         <div class="chart-wrap"><canvas id="chartDespesasCat"></canvas></div>
       </div>
+      <div class="chart-card full">
+      <div class="chart-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>👥 Top 10 Clientes por Lavagens</span>
+        <button class="btn-ver-todos" onclick="abrirTodosClientes()">Ver todos</button>
+      </div>
+      <div class="chart-wrap" style="height:280px"><canvas id="chartClientes"></canvas></div>
+    </div>
     </div>
 
     <div class="pendencias-section">

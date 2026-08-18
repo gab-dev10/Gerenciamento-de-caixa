@@ -1316,3 +1316,36 @@ main {
   font-style: italic;
   border-top: 1px solid var(--border);
 }
+
+.btn-ver-todos {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+}
+
+.btn-ver-todos:hover { border-color: var(--accent); color: var(--accent); }
+
+.todos-clientes-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+}
+
+.todos-clientes-nome { font-size: 0.88rem; font-weight: 500; }
+
+.todos-clientes-count {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent);
+}

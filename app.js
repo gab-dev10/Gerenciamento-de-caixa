@@ -122,6 +122,9 @@ function getPeriodDates() {
   } else if (currentPeriod === 'mes_ant') {
     start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     end   = new Date(now.getFullYear(), now.getMonth(), 0);
+  } else if (currentPeriod === 'ano') {
+    start = new Date(now.getFullYear(), 0, 1);
+    end   = new Date(now.getFullYear(), 11, 31);
   } else {
     start = customStart ? new Date(customStart + 'T00:00:00') : new Date(now.getFullYear(), now.getMonth(), 1);
     end   = customEnd   ? new Date(customEnd   + 'T23:59:59') : new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -450,9 +453,20 @@ function buildCharts(servs, desps, start, end) {
     cur.setDate(cur.getDate() + 1);
   }
 
+  const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   let labels, receitaData, despData;
 
-  if (days.length <= 31) {
+  if (currentPeriod === 'ano') {
+    labels      = mesesNomes;
+    receitaData = mesesNomes.map((_, i) =>
+      servs.filter(s => s.status === 'pago' && new Date(s.data + 'T00:00:00').getMonth() === i)
+           .reduce((a, s) => a + s.preco, 0)
+    );
+    despData    = mesesNomes.map((_, i) =>
+      desps.filter(d => new Date(d.data + 'T00:00:00').getMonth() === i)
+           .reduce((a, d) => a + d.valor, 0)
+    );
+  } else if (days.length <= 31) {
     labels      = days.map(d => { const [,m,dy] = d.split('-'); return `${dy}/${m}`; });
     receitaData = days.map(d => servs.filter(s => s.data === d && s.status === 'pago').reduce((a, s) => a + s.preco, 0));
     despData    = days.map(d => desps.filter(x => x.data === d).reduce((a, x) => a + x.valor, 0));
@@ -479,9 +493,16 @@ function buildCharts(servs, desps, start, end) {
   }, { ...baseOpt, plugins: { legend: { display: true, labels: { color: '#8896b0', boxWidth: 12 } } } });
 
   // Evolução de lavagens por dia
-  const lavDay = days.map(d => servs.filter(s => s.data === d).length);
+  const lavLabels = currentPeriod === 'ano'
+    ? mesesNomes
+    : days.map(d => { const [,m,dy] = d.split('-'); return `${dy}/${m}`; });
+
+  const lavDay = currentPeriod === 'ano'
+    ? mesesNomes.map((_, i) => servs.filter(s => new Date(s.data + 'T00:00:00').getMonth() === i).length)
+    : days.map(d => servs.filter(s => s.data === d).length);
+
   mkChart('chartLavagens', 'line', {
-    labels: days.map(d => { const [,m,dy] = d.split('-'); return `${dy}/${m}`; }),
+    labels: lavLabels,
     datasets: [{
       data: lavDay, borderColor: '#60a5fa',
       backgroundColor: 'rgba(96,165,250,0.1)',
@@ -524,6 +545,76 @@ function buildCharts(servs, desps, start, end) {
     labels: Object.keys(catVal),
     datasets: [{ data: Object.values(catVal), backgroundColor: [...pizzaColors].reverse(), borderWidth: 0 }]
   }, { ...baseOpt, plugins: { legend: { display: true, position: 'bottom', labels: { color: '#8896b0', boxWidth: 10, font: { size: 11 } } } } });
+
+  // Top 10 clientes por quantidade de lavagens
+  const clienteCount = {};
+  servs.forEach(s => {
+    clienteCount[s.cliente] = (clienteCount[s.cliente] || 0) + 1;
+  });
+
+  const clientesOrdenados = Object.entries(clienteCount)
+    .sort((a, b) => b[1] - a[1]);
+
+  const top10 = clientesOrdenados.slice(0, 10);
+
+  mkChart('chartClientes', 'bar', {
+    labels: top10.map(([nome]) => nome),
+    datasets: [{
+      data: top10.map(([, qtd]) => qtd),
+      backgroundColor: 'rgba(59,232,160,0.7)',
+      borderRadius: 6
+    }]
+  }, {
+    ...baseOpt,
+    indexAxis: 'y',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.raw} lavagem${ctx.raw !== 1 ? 's' : ''}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { stepSize: 1, color: '#8896b0' },
+        grid: { color: '#2a3248' }
+      },
+      y: {
+        ticks: { color: '#e8edf5', font: { size: 11 } },
+        grid: { display: false }
+      }
+    }
+  });
+
+  // Guarda ranking completo para o modal "Ver todos"
+  window._rankingClientes = clientesOrdenados;
+}
+
+function abrirTodosClientes() {
+  const ranking = window._rankingClientes || [];
+
+  if (ranking.length === 0) {
+    document.getElementById('modal-title').textContent = 'Todos os Clientes';
+    document.getElementById('modal-msg').innerHTML = '<div class="empty-state">Nenhum dado no período</div>';
+  } else {
+    document.getElementById('modal-title').textContent = `👥 Todos os Clientes (${ranking.length})`;
+    document.getElementById('modal-msg').innerHTML = `
+      <div style="max-height:400px;overflow-y:auto;margin-top:4px">
+        ${ranking.map(([nome, qtd], i) => `
+          <div class="todos-clientes-item">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-family:'Syne',sans-serif;font-size:0.75rem;color:var(--muted);width:20px;text-align:right">${i + 1}</span>
+              <span class="todos-clientes-nome">${nome}</span>
+            </div>
+            <span class="todos-clientes-count">${qtd} lav.</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  document.getElementById('modal-ok').style.display = 'none';
+  document.getElementById('modal-cancel-txt').textContent = 'Fechar';
+  document.getElementById('modal-confirm').classList.add('open');
 }
 
 function mkChart(id, type, data, options) {
@@ -1115,8 +1206,16 @@ function abrirDiaModal(dateStr) {
 
   const [ano, mes, dia] = dateStr.split('-');
   const label = `${dia}/${mes}/${ano}`;
+  const totalVeiculos = servsDia.length;
 
-  let html = `<div class="cal-modal-date">📆 ${label}</div>`;
+  let html = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="cal-modal-date" style="margin-bottom:0">📆 ${label}</div>
+      <div style="text-align:center;background:var(--bg3);border-radius:var(--radius-sm);padding:6px 14px">
+        <div style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;color:var(--accent);line-height:1">${totalVeiculos}</div>
+        <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px">veículos</div>
+      </div>
+    </div>`;
 
   if (agendados.length > 0) {
     html += `<div class="cal-section-title agendado">📅 Agendados</div>`;
