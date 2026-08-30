@@ -1254,6 +1254,177 @@ function abrirDiaModal(dateStr) {
   document.getElementById('modal-confirm').classList.add('open');
 }
 
+// ===================== GERADOR DE NOTA =====================
+let _notaLancamentos = [];
+
+function abrirGerarNota() {
+  // Reseta o modal
+  document.getElementById('nota-cliente').value = '';
+  document.getElementById('nota-de').value      = '';
+  document.getElementById('nota-ate').value     = '';
+  document.getElementById('nota-cliente-suggestions').style.display = 'none';
+  document.getElementById('nota-etapa-1').style.display  = 'block';
+  document.getElementById('nota-etapa-2').style.display  = 'none';
+  document.getElementById('nota-etapa-3').style.display  = 'none';
+  document.getElementById('modal-nota').classList.add('open');
+}
+
+function fecharNotaModal() {
+  document.getElementById('modal-nota').classList.remove('open');
+}
+
+function voltarEtapa1() {
+  document.getElementById('nota-etapa-1').style.display = 'block';
+  document.getElementById('nota-etapa-2').style.display = 'none';
+}
+
+function voltarEtapa2() {
+  document.getElementById('nota-etapa-2').style.display = 'block';
+  document.getElementById('nota-etapa-3').style.display = 'none';
+}
+
+// Autocomplete do cliente no modal de nota
+function onNotaClienteInput() {
+  const val = document.getElementById('nota-cliente').value.trim().toLowerCase();
+  const box  = document.getElementById('nota-cliente-suggestions');
+
+  if (val.length < 1) { box.style.display = 'none'; return; }
+
+  const nomes = [...new Set(
+    servicos.map(s => s.cliente).filter(n => n.toLowerCase().startsWith(val))
+  )].slice(0, 6);
+
+  if (nomes.length === 0) { box.style.display = 'none'; return; }
+
+  box.innerHTML = nomes.map(n =>
+    `<div class="autocomplete-item" onclick="selecionarClienteNota('${n.replace(/'/g, "\\'")}')">${n}</div>`
+  ).join('');
+
+  box.style.display = 'block';
+}
+
+function selecionarClienteNota(nome) {
+  document.getElementById('nota-cliente').value = nome;
+  document.getElementById('nota-cliente-suggestions').style.display = 'none';
+}
+
+function buscarLancamentosNota() {
+  const cliente = document.getElementById('nota-cliente').value.trim();
+  const de      = document.getElementById('nota-de').value;
+  const ate     = document.getElementById('nota-ate').value;
+
+  if (!cliente) { showToast('Informe o cliente', 'error'); return; }
+
+  let lista = servicos.filter(s =>
+    s.cliente.toLowerCase() === cliente.toLowerCase() &&
+    s.status === 'pago'
+  );
+
+  if (de)  lista = lista.filter(s => s.data >= de);
+  if (ate) lista = lista.filter(s => s.data <= ate);
+
+  lista = lista.sort((a, b) => a.data.localeCompare(b.data));
+
+  _notaLancamentos = lista;
+
+  if (lista.length === 0) {
+    document.getElementById('nota-lista-wrap').innerHTML =
+      '<div class="nota-empty">Nenhum lançamento encontrado para este cliente no período.</div>';
+    document.getElementById('nota-etapa-1').style.display = 'none';
+    document.getElementById('nota-etapa-2').style.display = 'block';
+    return;
+  }
+
+  const itens = lista.map((s, i) => {
+    const t = tiposLavagem.find(x => x.id === s.tipo_id);
+    return `
+      <div class="nota-item" onclick="toggleNotaCheck(${i})">
+        <input type="checkbox" id="nota-check-${i}" checked onclick="event.stopPropagation();toggleNotaCheck(${i})">
+        <div class="nota-item-info">
+          <div class="nota-item-main">${s.carro}</div>
+          <div class="nota-item-sub">${fmtDate(s.data)} · ${t ? t.nome : '—'}</div>
+        </div>
+        <div class="nota-item-valor">${fmt(s.preco)}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('nota-lista-wrap').innerHTML = `
+    <div class="nota-selecionar-todos" onclick="toggleTodosNota()">
+      <input type="checkbox" id="nota-check-todos" checked onclick="event.stopPropagation();toggleTodosNota()">
+      <span>Selecionar todos (${lista.length})</span>
+    </div>
+    ${itens}`;
+
+  document.getElementById('nota-etapa-1').style.display = 'none';
+  document.getElementById('nota-etapa-2').style.display = 'block';
+}
+
+function toggleNotaCheck(i) {
+  const cb     = document.getElementById(`nota-check-${i}`);
+  cb.checked   = !cb.checked;
+  atualizarCheckTodos();
+}
+
+function toggleTodosNota() {
+  const todos  = document.getElementById('nota-check-todos');
+  todos.checked = !todos.checked;
+  _notaLancamentos.forEach((_, i) => {
+    const cb = document.getElementById(`nota-check-${i}`);
+    if (cb) cb.checked = todos.checked;
+  });
+}
+
+function atualizarCheckTodos() {
+  const todos    = document.getElementById('nota-check-todos');
+  const checks   = _notaLancamentos.map((_, i) => document.getElementById(`nota-check-${i}`)?.checked);
+  todos.checked  = checks.every(Boolean);
+}
+
+function gerarNota() {
+  const selecionados = _notaLancamentos.filter((_, i) => {
+    const cb = document.getElementById(`nota-check-${i}`);
+    return cb && cb.checked;
+  });
+
+  if (selecionados.length === 0) {
+    showToast('Selecione pelo menos um lançamento', 'error');
+    return;
+  }
+
+  const linhas = selecionados.map(s => {
+    const t    = tiposLavagem.find(x => x.id === s.tipo_id);
+    const tipo = t ? t.nome : '—';
+    const preco = fmt(s.preco);
+    return `${fmtDate(s.data)} - ${s.carro} - ${tipo} - ${preco}`;
+  });
+
+  const texto = `Lavagem de Veículos:\n\n${linhas.join('\n')}`;
+
+  document.getElementById('nota-resultado-texto').textContent = texto;
+  document.getElementById('nota-etapa-2').style.display = 'none';
+  document.getElementById('nota-etapa-3').style.display = 'block';
+}
+
+async function copiarNota() {
+  const texto = document.getElementById('nota-resultado-texto').textContent;
+  try {
+    await navigator.clipboard.writeText(texto);
+    const btn = document.getElementById('btn-copiar-nota');
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => { btn.textContent = '📋 Copiar'; }, 2000);
+  } catch {
+    showToast('Erro ao copiar', 'error');
+  }
+}
+
+// Fechar autocomplete do modal de nota ao clicar fora
+document.addEventListener('click', e => {
+  if (!e.target.closest('#nota-cliente') && !e.target.closest('#nota-cliente-suggestions')) {
+    const box = document.getElementById('nota-cliente-suggestions');
+    if (box) box.style.display = 'none';
+  }
+});
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/Gerenciamento-de-caixa/sw.js');

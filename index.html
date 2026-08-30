@@ -274,8 +274,13 @@
 
   <!-- ===================== HISTÓRICO ===================== -->
   <div class="page" id="page-historico">
-    <h1 class="section-title">Histórico</h1>
-    <p class="section-sub">Consulte, filtre e edite seus lançamentos</p>
+    <div class="page-header">
+      <div>
+        <h1 class="section-title">Histórico</h1>
+        <p class="section-sub" style="margin-bottom:0">Consulte, filtre e edite seus lançamentos</p>
+      </div>
+      <button class="btn-nota" onclick="abrirGerarNota()">🧾 Gerar Nota</button>
+    </div>
 
     <div class="tabs">
       <button class="tab-btn active" onclick="setHistTab('servicos')" id="tab-servicos">🚗 Serviços</button>
@@ -413,6 +418,59 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- MODAL GERADOR DE NOTA -->
+<div class="modal-overlay" id="modal-nota">
+  <div class="modal" style="max-width:540px;max-height:90vh;overflow-y:auto">
+    <div class="config-modal-head">
+      <h3>🧾 Gerador de Nota</h3>
+      <button onclick="fecharNotaModal()" class="btn-close-modal">✕</button>
+    </div>
+
+    <!-- ETAPA 1: Filtros -->
+    <div id="nota-etapa-1" style="padding:20px">
+      <div class="form-group" style="position:relative">
+        <label>Cliente <span class="req">*</span></label>
+        <input type="text" id="nota-cliente" placeholder="Digite o nome do cliente"
+          autocomplete="off" oninput="onNotaClienteInput()">
+        <div id="nota-cliente-suggestions" class="autocomplete-list" style="display:none"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>De</label>
+          <input type="date" id="nota-de">
+        </div>
+        <div class="form-group">
+          <label>Até</label>
+          <input type="date" id="nota-ate">
+        </div>
+      </div>
+      <button class="btn-salvar" onclick="buscarLancamentosNota()" style="margin-top:4px">
+        Buscar Lançamentos
+      </button>
+    </div>
+
+    <!-- ETAPA 2: Seleção -->
+    <div id="nota-etapa-2" style="display:none;padding:0 20px 20px">
+      <div id="nota-lista-wrap"></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn-cancel" onclick="voltarEtapa1()">← Voltar</button>
+        <button class="btn-salvar" onclick="gerarNota()" style="margin-top:0">Gerar Nota</button>
+      </div>
+    </div>
+
+    <!-- ETAPA 3: Resultado -->
+    <div id="nota-etapa-3" style="display:none;padding:0 20px 20px">
+      <div class="nota-resultado" id="nota-resultado-texto"></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn-cancel" onclick="voltarEtapa2()">← Voltar</button>
+        <button class="btn-salvar" onclick="copiarNota()" style="margin-top:0" id="btn-copiar-nota">
+          📋 Copiar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="app.js"></script>
 </body>
