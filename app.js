@@ -1315,9 +1315,12 @@ function buscarLancamentosNota() {
 
   if (!cliente) { showToast('Informe o cliente', 'error'); return; }
 
+  const norm = t => (t || '').trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
   let lista = servicos.filter(s =>
-    s.cliente.toLowerCase() === cliente.toLowerCase() &&
-    s.status === 'pago'
+    norm(s.cliente) === norm(cliente) &&
+    !(s.agendado && isFuture(s.data))
   );
 
   if (de)  lista = lista.filter(s => s.data >= de);
