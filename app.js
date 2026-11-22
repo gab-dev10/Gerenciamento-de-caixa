@@ -5,21 +5,24 @@ let servicos     = [];
 let despesas     = [];
 let tiposLavagem = [];
 let categorias   = [];
+let nfses = [];
  
 // Carrega todos os dados do banco ao iniciar
 async function loadAll() {
   showLoading(true);
   try {
-    const [s, d, t, c] = await Promise.all([
+    const [s, d, t, c, n] = await Promise.all([
       db.from('servicos').select('*').order('criado_em', { ascending: false }),
       db.from('despesas').select('*').order('criado_em', { ascending: false }),
       db.from('tipos_lavagem').select('*'),
-      db.from('categorias').select('*')
+      db.from('categorias').select('*'),
+      db.from('nfse').select('*').order('criado_em', { ascending: false })
     ]);
     servicos     = s.data || [];
     despesas     = d.data || [];
     tiposLavagem = t.data || [];
     categorias   = c.data || [];
+    nfses        = n.data || [];
   } catch (e) {
     showToast('Erro ao carregar dados', 'error');
   }
@@ -160,6 +163,7 @@ function goPage(name) {
   if (name === 'historico')   renderHistorico();
   if (name === 'lancamentos') populateFormSelects();
   if (name === 'agenda') { calAno = new Date().getFullYear(); calMes = new Date().getMonth(); renderCalendario(); }
+  if (name === 'nfse') renderNfse();
 }
 
 // ===================== LANÇAMENTOS =====================
@@ -696,6 +700,7 @@ function renderHistorico() {
           <div class="hist-sub">${fmtDate(s.data)} · ${t ? t.nome : '—'} · ${s.pagamento || '—'}</div>
         </div>
         <span class="badge ${badgeCls}">${statusTxt}</span>
+        ${s.nfse_id ? '<span class="badge nfse">🧾 NFS-e</span>' : ''}
         <div class="hist-value green">${fmt(s.preco)}</div>
         <div class="hist-actions">
           <button class="btn-icon" onclick="event.stopPropagation();editarServico('${s.id}')">✏️</button>
@@ -757,6 +762,7 @@ function limparFiltros(){
 
 function editarServico(id) {
   const s = servicos.find(x => x.id === id);
+  if (s.nfse_id) { avisarCarroEmNfse(s); return; }
   if (!s) return;
   editingId   = id;
   editingType = 'servico';
@@ -843,6 +849,8 @@ function verDespesa(id) {
 
 // ===================== DELETAR SERVIÇO =====================
 function deletarServico(id) {
+  const sv = servicos.find(x => x.id === id);
+  if (sv && sv.nfse_id) { avisarCarroEmNfse(sv); return; }
   openModal('Excluir Serviço', 'Tem certeza? Esta ação não pode ser desfeita.', async () => {
     try {
       showLoading(true);
@@ -1315,6 +1323,18 @@ function selecionarClienteNota(nome) {
   document.getElementById('nota-cliente-suggestions').style.display = 'none';
 }
 
+const fmtDM = d => d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` : '—';
+
+function montarTextoNota(lista) {
+  const linhas = lista.map(s => {
+    const t = tiposLavagem.find(x => x.id === s.tipo_id);
+    return `${fmtDate(s.data)} - ${s.carro} - ${t ? t.nome : '—'} - ${fmt(s.preco)}`;
+  });
+  return `Lavagem de Veículos:\n\n${linhas.join('\n')}`;
+}
+
+let _notaSelecionados = [];
+
 function buscarLancamentosNota() {
   const cliente = document.getElementById('nota-cliente').value.trim();
   const de      = document.getElementById('nota-de').value;
@@ -1333,26 +1353,35 @@ function buscarLancamentosNota() {
   if (de)  lista = lista.filter(s => s.data >= de);
   if (ate) lista = lista.filter(s => s.data <= ate);
 
-  lista = lista.sort((a, b) => a.data.localeCompare(b.data));
-
+  lista.sort((a, b) => a.data.localeCompare(b.data));
   _notaLancamentos = lista;
+
+  document.getElementById('nota-etapa-1').style.display = 'none';
+  document.getElementById('nota-etapa-2').style.display = 'block';
 
   if (lista.length === 0) {
     document.getElementById('nota-lista-wrap').innerHTML =
       '<div class="nota-empty">Nenhum lançamento encontrado para este cliente no período.</div>';
-    document.getElementById('nota-etapa-1').style.display = 'none';
-    document.getElementById('nota-etapa-2').style.display = 'block';
     return;
   }
 
+  const livres = lista.filter(s => !s.nfse_id).length;
+
   const itens = lista.map((s, i) => {
-    const t = tiposLavagem.find(x => x.id === s.tipo_id);
+    const t     = tiposLavagem.find(x => x.id === s.tipo_id);
+    const bloq  = !!s.nfse_id;
+    const n     = bloq ? nfses.find(x => x.id === s.nfse_id) : null;
+    const aviso = bloq
+      ? ` · 🧾 Já na NFS-e de ${n ? fmtDM(n.data_inicial) + ' - ' + fmtDM(n.data_final) : '—'}`
+      : (s.status === 'pago' ? '' : ' · ⏳ Não pago');
+
     return `
-      <div class="nota-item" onclick="toggleNotaCheck(${i})">
-        <input type="checkbox" id="nota-check-${i}" checked onclick="event.stopPropagation();toggleNotaCheck(${i})">
+      <div class="nota-item${bloq ? ' bloqueado' : ''}" ${bloq ? '' : `onclick="toggleNotaCheck(${i})"`}>
+        <input type="checkbox" id="nota-check-${i}" ${bloq ? 'disabled' : 'checked'}
+          onclick="event.stopPropagation();atualizarCheckTodos()">
         <div class="nota-item-info">
           <div class="nota-item-main">${s.carro}</div>
-          <div class="nota-item-sub">${fmtDate(s.data)} · ${t ? t.nome : '—'}</div>
+          <div class="nota-item-sub">${fmtDate(s.data)} · ${t ? t.nome : '—'}${aviso}</div>
         </div>
         <div class="nota-item-valor">${fmt(s.preco)}</div>
       </div>`;
@@ -1360,40 +1389,49 @@ function buscarLancamentosNota() {
 
   document.getElementById('nota-lista-wrap').innerHTML = `
     <div class="nota-selecionar-todos" onclick="toggleTodosNota()">
-      <input type="checkbox" id="nota-check-todos" checked onclick="event.stopPropagation();toggleTodosNota()">
-      <span>Selecionar todos (${lista.length})</span>
+      <input type="checkbox" id="nota-check-todos" ${livres ? 'checked' : 'disabled'}
+        onclick="event.stopPropagation();marcarTodosNota(this.checked)">
+      <span>Selecionar todos (${livres} disponíveis)</span>
     </div>
     ${itens}`;
-
-  document.getElementById('nota-etapa-1').style.display = 'none';
-  document.getElementById('nota-etapa-2').style.display = 'block';
 }
 
+// clique na linha do carro
 function toggleNotaCheck(i) {
-  const cb     = document.getElementById(`nota-check-${i}`);
-  cb.checked   = !cb.checked;
+  const cb = document.getElementById(`nota-check-${i}`);
+  if (!cb || cb.disabled) return;
+  cb.checked = !cb.checked;
   atualizarCheckTodos();
 }
 
+// clique na linha "Selecionar todos"
 function toggleTodosNota() {
-  const todos  = document.getElementById('nota-check-todos');
+  const todos = document.getElementById('nota-check-todos');
+  if (!todos || todos.disabled) return;
   todos.checked = !todos.checked;
+  marcarTodosNota(todos.checked);
+}
+
+function marcarTodosNota(marcado) {
   _notaLancamentos.forEach((_, i) => {
     const cb = document.getElementById(`nota-check-${i}`);
-    if (cb) cb.checked = todos.checked;
+    if (cb && !cb.disabled) cb.checked = marcado;
   });
 }
 
 function atualizarCheckTodos() {
-  const todos    = document.getElementById('nota-check-todos');
-  const checks   = _notaLancamentos.map((_, i) => document.getElementById(`nota-check-${i}`)?.checked);
-  todos.checked  = checks.every(Boolean);
+  const todos  = document.getElementById('nota-check-todos');
+  const livres = _notaLancamentos
+    .map((_, i) => document.getElementById(`nota-check-${i}`))
+    .filter(cb => cb && !cb.disabled);
+  todos.checked = livres.length > 0 && livres.every(cb => cb.checked);
 }
 
+// Botão "Visualizar": mostra a listinha para conferir (não salva nada)
 function gerarNota() {
   const selecionados = _notaLancamentos.filter((_, i) => {
     const cb = document.getElementById(`nota-check-${i}`);
-    return cb && cb.checked;
+    return cb && cb.checked && !cb.disabled;
   });
 
   if (selecionados.length === 0) {
@@ -1401,30 +1439,210 @@ function gerarNota() {
     return;
   }
 
-  const linhas = selecionados.map(s => {
-    const t    = tiposLavagem.find(x => x.id === s.tipo_id);
-    const tipo = t ? t.nome : '—';
-    const preco = fmt(s.preco);
-    return `${fmtDate(s.data)} - ${s.carro} - ${tipo} - ${preco}`;
-  });
-
-  const texto = `Lavagem de Veículos:\n\n${linhas.join('\n')}`;
-
-  document.getElementById('nota-resultado-texto').textContent = texto;
+  _notaSelecionados = selecionados;
+  document.getElementById('nota-resultado-texto').textContent = montarTextoNota(selecionados);
   document.getElementById('nota-etapa-2').style.display = 'none';
   document.getElementById('nota-etapa-3').style.display = 'block';
 }
 
-async function copiarNota() {
-  const texto = document.getElementById('nota-resultado-texto').textContent;
+// Botão "Gerar NFS-e": confirma e salva a nota
+function salvarNfse() {
+  const sel = _notaSelecionados;
+  if (sel.length === 0) return;
+
+  const cliente = sel[0].cliente;
+  const datas   = sel.map(s => s.data).sort();
+  const total   = Math.round(sel.reduce((a, s) => a + Number(s.preco), 0) * 100) / 100;
+
+  openModal(
+    'Gerar NFS-e',
+    `${cliente} · ${sel.length} carro${sel.length !== 1 ? 's' : ''} · ${fmt(total)}. ` +
+    `Os carros ficam vinculados a esta nota e não poderão ser editados nem entrar em outra.`,
+    async () => {
+      const nota = {
+        id: uid(), cliente,
+        data_inicial: datas[0],
+        data_final: datas[datas.length - 1],
+        total, status: 'a-receber', data_pagamento: null,
+        criado_em: new Date().toISOString()
+      };
+      const ids = sel.map(s => s.id);
+
+      try {
+        showLoading(true);
+        await dbInsert('nfse', nota);
+        const { error } = await db.from('servicos').update({ nfse_id: nota.id }).in('id', ids);
+        if (error) { await dbDelete('nfse', nota.id); throw error; }
+
+        nfses.unshift(nota);
+        servicos.forEach(s => { if (ids.includes(s.id)) s.nfse_id = nota.id; });
+        fecharNotaModal();
+        showToast('🧾 NFS-e gerada!');
+        goPage('nfse');
+      } catch (e) {
+        showToast('Erro ao gerar NFS-e', 'error');
+      }
+      showLoading(false);
+    },
+    'green'
+  );
+}
+
+// ===================== ABA NFS-e =====================
+let _nfseAberta = null;
+
+function renderNfse() {
+  const busca  = document.getElementById('nfse-busca').value.trim().toLowerCase();
+  const status = document.getElementById('nfse-status').value;
+
+  const abertas = nfses.filter(n => n.status !== 'paga');
+  document.getElementById('nfse-total-aberto').textContent =
+    fmt(abertas.reduce((a, n) => a + Number(n.total), 0));
+  document.getElementById('nfse-qtd-aberto').textContent = abertas.length;
+
+  // nfses já vem da mais nova para a mais antiga
+  const lista = nfses.filter(n =>
+    (!busca  || n.cliente.toLowerCase().includes(busca)) &&
+    (!status || n.status === status)
+  );
+
+  const el = document.getElementById('nfse-list');
+  if (lista.length === 0) {
+    el.innerHTML = '<div class="empty-state">📭 Nenhuma NFS-e encontrada</div>';
+    return;
+  }
+
+  el.innerHTML = lista.map(n => {
+    const paga = n.status === 'paga';
+    const qtd  = servicos.filter(s => s.nfse_id === n.id).length;
+    return `
+      <div class="nfse-card" onclick="abrirNfse('${n.id}')">
+        <div class="nfse-card-info">
+          <div class="nfse-card-datas">${fmtDM(n.data_inicial)} - ${fmtDM(n.data_final)}</div>
+          <div class="nfse-card-cliente">${n.cliente}</div>
+          <div class="nfse-card-sub">${qtd} carro${qtd !== 1 ? 's' : ''}${paga ? ' · paga em ' + fmtDate(n.data_pagamento) : ''}</div>
+        </div>
+        <div class="nfse-card-direita">
+          <div class="nfse-card-valor">${fmt(n.total)}</div>
+          <span class="badge ${paga ? 'pago' : 'nao-pago'}">${paga ? 'Paga' : 'A receber'}</span>
+        </div>
+        <div class="hist-actions">
+          ${paga ? '' : `<button class="btn-pagar" onclick="event.stopPropagation();pagarNfse('${n.id}')">✓ Paga</button>`}
+          <button class="btn-icon del" onclick="event.stopPropagation();excluirNfse('${n.id}')">🗑️</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function abrirNfse(id) {
+  const n = nfses.find(x => x.id === id);
+  if (!n) return;
+  _nfseAberta = id;
+
+  const carros = servicos.filter(s => s.nfse_id === id)
+    .sort((a, b) => a.data.localeCompare(b.data));
+
+  document.getElementById('nfse-modal-titulo').textContent =
+    `${n.cliente} · ${fmtDM(n.data_inicial)} - ${fmtDM(n.data_final)}`;
+
+  document.getElementById('nfse-modal-corpo').innerHTML =
+    carros.map(s => {
+      const t = tiposLavagem.find(x => x.id === s.tipo_id);
+      return `
+        <div class="cal-servico-item">
+          <div class="cal-servico-info">
+            <div class="cal-servico-nome">${s.carro}</div>
+            <div class="cal-servico-tipo">${fmtDate(s.data)} · ${t ? t.nome : '—'}</div>
+          </div>
+          <div class="cal-servico-valor" style="color:var(--green)">${fmt(s.preco)}</div>
+        </div>`;
+    }).join('') +
+    `<div style="display:flex;justify-content:space-between;padding:12px 4px 16px;font-size:0.88rem">
+       <span style="color:var(--muted)">Total</span>
+       <strong style="font-family:'Syne',sans-serif">${fmt(n.total)}</strong>
+     </div>`;
+
+  document.getElementById('btn-copiar-nfse').textContent = '📋 Copiar texto';
+  document.getElementById('modal-nfse').classList.add('open');
+}
+
+function fecharNfseModal() {
+  document.getElementById('modal-nfse').classList.remove('open');
+}
+
+async function copiarNfse() {
+  const carros = servicos.filter(s => s.nfse_id === _nfseAberta)
+    .sort((a, b) => a.data.localeCompare(b.data));
   try {
-    await navigator.clipboard.writeText(texto);
-    const btn = document.getElementById('btn-copiar-nota');
+    await navigator.clipboard.writeText(montarTextoNota(carros));
+    const btn = document.getElementById('btn-copiar-nfse');
     btn.textContent = '✅ Copiado!';
-    setTimeout(() => { btn.textContent = '📋 Copiar'; }, 2000);
+    setTimeout(() => { btn.textContent = '📋 Copiar texto'; }, 2000);
   } catch {
     showToast('Erro ao copiar', 'error');
   }
+}
+
+function pagarNfse(id) {
+  const n = nfses.find(x => x.id === id);
+  if (!n) return;
+
+  openModal(
+    'Marcar NFS-e como paga',
+    `${n.cliente} · ${fmt(n.total)}. Os carros pendentes serão marcados como pagos hoje (${fmtDate(today())}), forma de pagamento "Faturado". Esta ação não pode ser desfeita.`,
+    async () => {
+      const hoje = today();
+      const upd  = { status: 'pago', agendado: false, data_pagamento: hoje, pagamento: 'Faturado' };
+      // quem já estava pago individualmente mantém a data original
+      const pendentes = servicos.filter(s => s.nfse_id === id && s.status !== 'pago').map(s => s.id);
+
+      try {
+        showLoading(true);
+        if (pendentes.length > 0) {
+          const { error } = await db.from('servicos').update(upd).in('id', pendentes);
+          if (error) throw error;
+        }
+        await dbUpdate('nfse', id, { status: 'paga', data_pagamento: hoje });
+
+        servicos.forEach(s => { if (pendentes.includes(s.id)) Object.assign(s, upd); });
+        n.status = 'paga';
+        n.data_pagamento = hoje;
+        showToast('✅ NFS-e paga!');
+      } catch (e) {
+        showToast('Erro ao marcar como paga', 'error');
+      }
+      showLoading(false);
+      renderNfse();
+      refreshDashboard();
+    },
+    'green'
+  );
+}
+
+function excluirNfse(id) {
+  const n = nfses.find(x => x.id === id);
+  if (!n) return;
+
+  const msg = n.status === 'paga'
+    ? 'Esta nota já está paga. Os carros continuam pagos, só deixam de estar vinculados a ela. Não pode ser desfeito.'
+    : 'Os carros ficam livres para entrar em outra nota. Não pode ser desfeito.';
+
+  openModal('Excluir NFS-e', msg, async () => {
+    try {
+      showLoading(true);
+      const { error } = await db.from('servicos').update({ nfse_id: null }).eq('nfse_id', id);
+      if (error) throw error;
+      await dbDelete('nfse', id);
+
+      servicos.forEach(s => { if (s.nfse_id === id) s.nfse_id = null; });
+      nfses = nfses.filter(x => x.id !== id);
+      showToast('NFS-e excluída.');
+    } catch (e) {
+      showToast('Erro ao excluir NFS-e', 'error');
+    }
+    showLoading(false);
+    renderNfse();
+  });
 }
 
 // Fechar autocomplete do modal de nota ao clicar fora
@@ -1439,4 +1657,10 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/Gerenciamento-de-caixa/sw.js');
   });
+}
+
+function avisarCarroEmNfse(s) {
+  const n = nfses.find(x => x.id === s.nfse_id);
+  const periodo = n ? ` de ${fmtDM(n.data_inicial)} - ${fmtDM(n.data_final)}` : '';
+  showToast(`Carro na NFS-e${periodo}. Exclua a nota para alterar.`, 'error');
 }

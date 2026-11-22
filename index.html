@@ -67,6 +67,10 @@
     <span class="nav-icon">📅</span>
     <span class="nav-label">Agenda</span>
   </button>
+  <button class="nav-btn" onclick="goPage('nfse')" id="nav-nfse">
+    <span class="nav-icon">🧾</span>
+    <span class="nav-label">NFS-e</span>
+  </button>
   <button class="nav-btn" onclick="goPage('lancamentos')" id="nav-lancamentos">
     <span class="nav-icon">➕</span>
     <span class="nav-label">Lançamentos</span>
@@ -75,12 +79,15 @@
     <span class="nav-icon">📋</span>
     <span class="nav-label">Histórico</span>
   </button>
-  <button class="nav-btn nav-config-mobile" onclick="openSettings()" id="nav-config">
-    <span class="nav-icon">⚙️</span>
-    <span class="nav-label">Config</span>
-  </button>
   <button class="settings-btn" onclick="openSettings()" title="Configurações">⚙️</button>
 </nav>
+
+<!-- Barra de Topo do Celular-->
+
+<header class="topbar-mobile">
+  <div class="topbar-brand" onclick="goPage('dashboard')">🚿 <span>LavaJato</span></div>
+  <button class="topbar-gear" onclick="openSettings()">⚙️</button>
+</header>
 
 <main>
 
@@ -367,6 +374,34 @@
   </div>
 </div>
 
+<!-- ===================== NFS-e ===================== -->
+<div class="page" id="page-nfse">
+  <h1 class="section-title">NFS-e</h1>
+  <p class="section-sub">Notas geradas, em aberto e pagas</p>
+
+  <div class="nfse-resumo">
+    <div class="kpi-card yellow">
+      <div class="kpi-label">A receber em NFS-e</div>
+      <div class="kpi-value" id="nfse-total-aberto">R$ 0,00</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Notas em aberto</div>
+      <div class="kpi-value" id="nfse-qtd-aberto">0</div>
+    </div>
+  </div>
+
+  <div class="filters-bar">
+    <input type="text" id="nfse-busca" placeholder="🔍 Buscar cliente" oninput="renderNfse()">
+    <select id="nfse-status" onchange="renderNfse()">
+      <option value="">Todas</option>
+      <option value="a-receber">A receber</option>
+      <option value="paga">Pagas</option>
+    </select>
+  </div>
+
+  <div id="nfse-list"></div>
+</div>
+
 </main>
 
 <!-- MODAL CONFIRMAÇÃO -->
@@ -457,7 +492,7 @@
       <div id="nota-lista-wrap"></div>
       <div style="display:flex;gap:8px;margin-top:16px">
         <button class="btn-cancel" onclick="voltarEtapa1()">← Voltar</button>
-        <button class="btn-salvar" onclick="gerarNota()" style="margin-top:0">Gerar Nota</button>
+        <button class="btn-salvar" onclick="gerarNota()" style="margin-top:0">Visualizar</button>
       </div>
     </div>
 
@@ -466,11 +501,21 @@
       <div class="nota-resultado" id="nota-resultado-texto"></div>
       <div style="display:flex;gap:8px;margin-top:16px">
         <button class="btn-cancel" onclick="voltarEtapa2()">← Voltar</button>
-        <button class="btn-salvar" onclick="copiarNota()" style="margin-top:0" id="btn-copiar-nota">
-          📋 Copiar
-        </button>
+        <button class="btn-salvar" onclick="salvarNfse()" style="margin-top:0">✅ Gerar NFS-e</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- MODAL DETALHE NFS-e -->
+<div class="modal-overlay" id="modal-nfse">
+  <div class="modal" style="max-width:540px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px">
+      <h3 id="nfse-modal-titulo" style="margin-bottom:0"></h3>
+      <button onclick="fecharNfseModal()" class="btn-close-modal">✕</button>
+    </div>
+    <div id="nfse-modal-corpo"></div>
+    <button class="btn-salvar" id="btn-copiar-nfse" onclick="copiarNfse()">📋 Copiar texto</button>
   </div>
 </div>
 

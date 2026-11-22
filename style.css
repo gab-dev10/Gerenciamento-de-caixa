@@ -172,7 +172,7 @@ main {
 }
 
 @media (max-width: 767px) {
-  main { padding: 20px 14px calc(var(--nav-h-mobile) + 16px); }
+  main { padding: 68px 14px calc(var(--nav-h-mobile) + 16px); }
 }
 
 @media (min-width: 768px) {
@@ -1446,3 +1446,99 @@ main {
   color: var(--muted);
   font-size: 0.86rem;
 }
+
+/* ===================== TOPBAR MOBILE ===================== */
+.topbar-mobile { display: none; }
+
+@media (max-width: 767px) {
+  .topbar-mobile {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 52px;
+    z-index: 200;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+  }
+  .topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .topbar-gear {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 6px;
+  }
+}
+
+/* ===================== NFS-e ===================== */
+/* o modal de confirmação precisa ficar acima do modal do gerador */
+#modal-confirm { z-index: 1100; }
+
+/* avisos longos quebram linha em vez de estourar a tela */
+.toast { white-space: normal; max-width: 92vw; text-align: center; }
+
+.nfse-resumo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.nfse-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  flex-wrap: wrap;
+}
+
+.nfse-card:hover { border-color: var(--accent); }
+
+.nfse-card-info { flex: 1; min-width: 150px; }
+
+.nfse-card-datas {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.nfse-card-cliente { font-size: 0.95rem; font-weight: 500; margin-top: 2px; }
+.nfse-card-sub { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
+
+.nfse-card-direita {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.nfse-card-valor {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--green);
+}
+
+.nota-item.bloqueado { opacity: 0.5; cursor: not-allowed; }
+.nota-item.bloqueado:hover { background: var(--bg3); }
+
+.badge.nfse { background: rgba(167,139,250,0.15); color: var(--purple); }
