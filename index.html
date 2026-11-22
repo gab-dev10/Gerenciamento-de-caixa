@@ -57,7 +57,7 @@
 <nav class="navbar">
   <div class="nav-brand" onclick="goPage('dashboard')" style="cursor:pointer">
     <span style="font-size:1.4rem">🚿</span>
-    <span class="nav-brand-text">LavaJato</span>
+    <span class="nav-brand-text">D.MANHÃES</span>
   </div>
   <button class="nav-btn active" onclick="goPage('dashboard')" id="nav-dashboard">
     <span class="nav-icon">📊</span>
@@ -307,6 +307,7 @@
       </select>
       <input type="text" id="f-s-busca" placeholder="🔍 Buscar cliente ou carro">
       <button class="period-btn" onclick="renderHistorico()" style="flex:none">Filtrar</button>
+      <button class="period-btn" onclick="limparFiltros()" style="flex: none;">Limpar</button>
     </div>
 
     <div id="filtros-despesas" class="filters-bar" style="display:none">
@@ -323,6 +324,7 @@
       </select>
       <input type="text" id="f-d-busca" placeholder="🔍 Buscar descrição">
       <button class="period-btn" onclick="renderHistorico()" style="flex:none">Filtrar</button>
+      <button class="period-btn" onclick="limparFiltros()" style="flex: none;">Limpar</button>
     </div>
 
     <div class="hist-table-wrap">

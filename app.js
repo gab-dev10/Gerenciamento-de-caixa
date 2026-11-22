@@ -111,11 +111,9 @@ function getPeriodDates() {
   let start, end;
   
   if (currentPeriod === 'semana') {
-    const day = now.getDay(); // 0 = domingo, 6 = sábado
-    start = new Date(now);
-    start.setDate(now.getDate() - day); // volta até domingo
-    end = new Date(start);
-    end.setDate(start.getDate() + 6); // vai até sábado
+    const day = now.getDay();
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+    end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 6);
 } else if (currentPeriod === 'mes') {
     start = new Date(now.getFullYear(), now.getMonth(), 1);
     end   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -746,6 +744,15 @@ function renderHistorico() {
   list.innerHTML = items.length
     ? items.join('')
     : '<div class="empty-state">📭 Nenhum registro encontrado</div>';
+}
+
+function limparFiltros(){
+  const ids = histTab === 'servicos'
+  ? ['f-s-ini', 'f-s-fim', 'f-s-status', 'f-s-tipo', 'f-s-busca']
+  : ['f-d-ini', 'f-d-fim', 'f-d-cat', 'f-d-busca'];
+
+  ids.forEach(id => { document.getElementById(id).value = ''});
+  renderHistorico()
 }
 
 function editarServico(id) {
